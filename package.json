@@ -1,4 +1,7 @@
 {
   "name": "ridgepointe-sms",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "twilio": "^5.0.0"
+  }
 }
