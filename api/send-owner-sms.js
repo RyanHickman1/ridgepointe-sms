@@ -1,7 +1,7 @@
-module.exports = async (req, res) => {
-  return res.status(200).json({
+export default function handler(req, res) {
+  res.status(200).json({
     ok: true,
     method: req.method,
     body: req.body ?? null
   });
-};
+}
