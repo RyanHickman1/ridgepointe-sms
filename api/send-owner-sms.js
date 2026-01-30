@@ -1,30 +1,47 @@
-export default function handler(req, res) {
-  const got = req.headers.authorization || null;
-  const env = process.env.API_SECRET || null;
+import twilio from "twilio";
 
-  // Don’t leak full secret; only show length + first 4 chars
-  const envPreview = env ? `${env.slice(0, 4)}… (len ${env.length})` : null;
-  const gotPreview = got ? `${got.slice(0, 10)}… (len ${got.length})` : null;
+export default async function handler(req, res) {
+  // Require Retell secret
+  const auth = req.headers.authorization || "";
+  if (auth !== `Bearer ${process.env.API_SECRET}`) {
+    return res.status(401).json({ ok: false, error: "unauthorized" });
+  }
 
-  const expected = env ? `Bearer ${env}` : null;
+  if (req.method !== "POST") {
+    return res.status(200).json({ ok: true, note: "POST required" });
+  }
 
-  if (!env) {
+  const { caller_name, caller_phone, message, intent, urgency } = req.body || {};
+
+  if (!caller_phone || !message) {
+    return res.status(400).json({ ok: false, error: "missing_fields" });
+  }
+
+  const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+  const smsBody =
+`🔔 Ridgepointe AI Message
+From: ${caller_name || "Unknown"}
+Phone: ${caller_phone}
+Intent: ${intent || "general"}
+Urgency: ${urgency || "medium"}
+
+Message:
+${message}`.slice(0, 1500);
+
+  try {
+    const result = await client.messages.create({
+      from: process.env.TWILIO_FROM_NUMBER,
+      to: process.env.OWNER_PHONE,
+      body: smsBody
+    });
+
+    return res.status(200).json({ ok: true, sent: true, sid: result.sid });
+  } catch (e) {
     return res.status(500).json({
       ok: false,
-      error: "API_SECRET missing on server",
-      envPreview
+      error: "twilio_failed",
+      detail: String(e?.message || e)
     });
   }
-
-  if (got !== expected) {
-    return res.status(401).json({
-      ok: false,
-      error: "unauthorized",
-      gotPreview,
-      envPreview,
-      tip: "Header must be: Authorization: Bearer <API_SECRET>"
-    });
-  }
-
-  return res.status(200).json({ ok: true });
 }
