@@ -2,6 +2,6 @@
   "name": "ridgepointe-sms",
   "private": true,
   "dependencies": {
-    "twilio": "^5.0.0"
+    "resend": "^3.2.0"
   }
 }
