@@ -1,14 +1,13 @@
-import twilio from "twilio";
+import { Resend } from "resend";
 
 export default async function handler(req, res) {
-  // Require Retell secret
   const auth = req.headers.authorization || "";
   if (auth !== `Bearer ${process.env.API_SECRET}`) {
     return res.status(401).json({ ok: false, error: "unauthorized" });
   }
 
   if (req.method !== "POST") {
-    return res.status(200).json({ ok: true, note: "POST required" });
+    return res.status(200).json({ ok: true });
   }
 
   const { caller_name, caller_phone, message, intent, urgency } = req.body || {};
@@ -17,31 +16,27 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: "missing_fields" });
   }
 
-  const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
-  const smsBody =
-`🔔 Ridgepointe AI Message
-From: ${caller_name || "Unknown"}
-Phone: ${caller_phone}
-Intent: ${intent || "general"}
-Urgency: ${urgency || "medium"}
-
-Message:
-${message}`.slice(0, 1500);
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
-    const result = await client.messages.create({
-      from: process.env.TWILIO_FROM_NUMBER,
-      to: process.env.OWNER_PHONE,
-      body: smsBody
+    await resend.emails.send({
+      from: "Francesca <onboarding@resend.dev>",
+      to: "your-email@gmail.com", // <-- replace with your real email
+      subject: `📞 New Call – ${intent || "General"}`,
+      html: `
+        <h2>Francesca AI Receptionist</h2>
+        <p><strong>Caller:</strong> ${caller_name || "Unknown"}</p>
+        <p><strong>Phone:</strong> ${caller_phone}</p>
+        <p><strong>Intent:</strong> ${intent || "General"}</p>
+        <p><strong>Urgency:</strong> ${urgency || "Medium"}</p>
+        <hr />
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
+      `
     });
 
-    return res.status(200).json({ ok: true, sent: true, sid: result.sid });
+    return res.status(200).json({ ok: true, sent: true });
   } catch (e) {
-    return res.status(500).json({
-      ok: false,
-      error: "twilio_failed",
-      detail: String(e?.message || e)
-    });
+    return res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 }
