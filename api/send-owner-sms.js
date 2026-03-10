@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   try {
     await resend.emails.send({
       from: "Francesca <send@francescaassistant.com>",
-      to: "ridgepointevenue@icloud.com", // <-- replace with your real email
+      to: "cvaryan2@gmail.com", // <-- replace with your real email
       subject: `📞 New Call – ${intent || "General"}`,
       html: `
         <h2>Francesca AI Receptionist</h2>
